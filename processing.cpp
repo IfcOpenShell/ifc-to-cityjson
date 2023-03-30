@@ -80,7 +80,7 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 
 	for (auto f : settings.file) {
 
-		auto ci = new ifcopenshell::geometry::Iterator("cgal", settings.settings, f, filters); // does not seem to help: , std::thread::hardware_concurrency());
+		auto ci = new IfcGeom::Iterator("cgal", settings.settings, f, filters, 1); // does not seem to help: , std::thread::hardware_concurrency());
 		iterators.push_back(ci);
 		auto& context_iterator = *ci;
 
@@ -93,8 +93,8 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 		size_t num_created = 0;
 
 		auto axis_settings = settings.settings;
-		axis_settings.set(ifcopenshell::geometry::settings::EXCLUDE_SOLIDS_AND_SURFACES, true);
-		axis_settings.set(ifcopenshell::geometry::settings::INCLUDE_CURVES, true);
+		axis_settings.set(IfcGeom::IteratorSettings::EXCLUDE_SOLIDS_AND_SURFACES, true);
+		axis_settings.set(IfcGeom::IteratorSettings::INCLUDE_CURVES, true);
 		auto geometry_mapper = ifcopenshell::geometry::impl::mapping_implementations().construct(f, axis_settings);
 
 		for (;; ++num_created) {
@@ -104,7 +104,7 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 				has_more = context_iterator.next();
 				T0.stop();
 			}
-			ifcopenshell::geometry::NativeElement* geom_object = nullptr;
+			IfcGeom::BRepElement* geom_object = nullptr;
 			if (has_more) {
 				geom_object = context_iterator.get_native();
 			}
@@ -130,7 +130,7 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 
 			std::list<shape_callback_item*> openings;
 
-			auto p = all_openings.map.equal_range(geom_object->product());
+			auto p = all_openings.map.equal_range(geom_object->product()->as<IfcUtil::IfcBaseEntity>());
 			for (auto it = p.first; it != p.second; ++it) {
 				openings.push_back(it->second);
 			}

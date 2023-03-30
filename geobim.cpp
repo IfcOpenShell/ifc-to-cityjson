@@ -8,11 +8,11 @@
 
 #include "timer.h"
 #include "writer.h"
-#include "settings.h"
 #include "processing.h"
 #include "radius_execution_context.h"
 #include "global_execution_context.h"
 #include "radius_comparison.h"
+#include "geobim.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -31,13 +31,21 @@ namespace {
 	};
 }
 
+#if 0
+
 int main(int argc, char** argv) {
 	Logger::SetOutput(&std::cerr, &std::cerr);
 	Logger::Verbosity(Logger::LOG_NOTICE);
 
 	geobim_settings settings;
 	parse_command_line(settings, argc, argv);
+	
+	perform(settings);
+}
 
+#endif
+
+void perform(geobim_settings settings) {
 	// global_execution_context<CGAL::Simple_cartesian<double>> global_context;
 	// Epick seems to have better performance?
 	global_execution_context<CGAL::Epick> global_context;
@@ -137,9 +145,9 @@ int main(int argc, char** argv) {
 			// pop the first 'empty' info
 			all_infos.pop_front();
 
-			city_json_writer write_city(settings.output_filename + c->radius_str);
-			simple_obj_writer write_obj(settings.output_filename + c->radius_str);
-			external_element_collector write_elem(settings.output_filename + ".external", all_infos);
+			city_json_writer write_city(settings.cityjson_output_filename.empty() ? settings.output_filename + c->radius_str + ".city.json" : settings.cityjson_output_filename);
+			simple_obj_writer write_obj(settings.obj_output_filename.empty() ? settings.output_filename + c->radius_str + ".obj" : settings.obj_output_filename);
+			external_element_collector write_elem(settings.json_output_filename.empty() ? settings.output_filename + ".external.json" : settings.json_output_filename, all_infos);
 
 			boost::variant<
 				global_execution_context<Kernel_>::segmentation_return_type,
@@ -163,19 +171,19 @@ int main(int argc, char** argv) {
 
 			T0.stop();
 
-			{	
+			if (!settings.cityjson_output_filename.empty()) {	
 				output_writer<city_json_writer> vis{ write_city };
 				boost::apply_visitor(vis, style_facet_pairs);
 				write_city.finalize();
 			}
 
-			{
+			if (!settings.obj_output_filename.empty()) {	
 				output_writer<simple_obj_writer> vis{ write_obj };
 				boost::apply_visitor(vis, style_facet_pairs);
 				write_obj.finalize();
 			}
 
-			{
+			if (!settings.json_output_filename.empty()) {	
 				output_writer<external_element_collector> vis{ write_elem };
 				boost::apply_visitor(vis, style_facet_pairs);
 				write_elem.finalize();

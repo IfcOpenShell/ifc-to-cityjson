@@ -83,7 +83,7 @@ struct radius_execution_context : public execution_context {
 	radius_execution_context& operator=(const radius_execution_context&) = delete;
 
 
-	IfcUtil::IfcBaseEntity* previous_src = nullptr;
+	const IfcUtil::IfcBaseEntity* previous_src = nullptr;
 	std::string previous_geom_ref;
 	// lazy_nary_union<CGAL::Nef_polyhedron_3<Kernel_> > per_product_collector;
 	cgal_placement_t last_place;
@@ -97,15 +97,15 @@ struct radius_execution_context : public execution_context {
 	void set_threads(size_t n);
 	
 	struct geometry_reference {
-		IfcUtil::IfcBaseEntity* target;
+		const IfcUtil::IfcBaseEntity* target;
 		cgal_placement_t inverse, own;
 	};
 	typedef std::list< CGAL::Nef_polyhedron_3<Kernel_> > result_list_t;
 
-	std::map<std::string, IfcUtil::IfcBaseEntity*> first_product_for_geom_id;
-	std::map<IfcUtil::IfcBaseEntity*, geometry_reference> reused_products;
-	std::map<IfcUtil::IfcBaseEntity*, cgal_placement_t> placements;
-	std::map<IfcUtil::IfcBaseEntity*, result_list_t> product_geometries;
+	std::map<std::string, const IfcUtil::IfcBaseEntity*> first_product_for_geom_id;
+	std::map<const IfcUtil::IfcBaseEntity*, geometry_reference> reused_products;
+	std::map<const IfcUtil::IfcBaseEntity*, cgal_placement_t> placements;
+	std::map<const IfcUtil::IfcBaseEntity*, result_list_t> product_geometries;
 
 	// + map for reused items
 	// + finalize() does insertion in n-ary_bool

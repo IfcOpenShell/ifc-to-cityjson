@@ -131,8 +131,8 @@ struct simple_obj_writer : public abstract_writer {
 	rgb GRAY;
 
 	simple_obj_writer(const std::string& fn_prefix)
-		: obj((fn_prefix + ".obj").c_str())
-		, mtl((fn_prefix + ".mtl").c_str())
+		: obj((fn_prefix).c_str())
+		, mtl((fn_prefix.substr(0, fn_prefix.size() - 4) + ".mtl").c_str())
 		, GRAY(0.6, 0.6, 0.6) {
 		obj << "mtllib " << fn_prefix << ".mtl\n";
 	}
@@ -236,7 +236,7 @@ struct city_json_writer : public abstract_writer {
 	json materials;
 
 	city_json_writer(const std::string& fn_prefix)
-		: filename(fn_prefix + ".json")
+		: filename(fn_prefix)
 		, materials(json::array())
 		, GRAY(0.6, 0.6, 0.6)
 	{		
@@ -319,7 +319,7 @@ struct external_element_collector : public abstract_writer {
 
 
 	external_element_collector(const std::string& fn_prefix, const std::list<item_info*>& infos)
-		: filename(fn_prefix + ".json")
+		: filename(fn_prefix)
 		, all_infos(infos)
 	{}
 

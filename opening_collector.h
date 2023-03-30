@@ -12,8 +12,8 @@
 // much less well on non-convex inputs.
 struct opening_collector : public execution_context {
 	std::list<shape_callback_item*> list;
-	std::map<IfcUtil::IfcBaseEntity*, IfcUtil::IfcBaseEntity*> opening_to_elem;
-	std::multimap<IfcUtil::IfcBaseEntity*, shape_callback_item*> map;
+	std::map<const IfcUtil::IfcBaseEntity*, IfcUtil::IfcBaseEntity*> opening_to_elem;
+	std::multimap<const IfcUtil::IfcBaseEntity*, shape_callback_item*> map;
 
 	void init(IfcParse::IfcFile* f);
 	opening_collector(IfcParse::IfcFile* f);

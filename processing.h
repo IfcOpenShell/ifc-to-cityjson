@@ -7,8 +7,8 @@
 #include "opening_collector.h"
 
 #include <ifcgeom/kernels/cgal/CgalKernel.h>
-#include <ifcgeom/schema_agnostic/IfcGeomFilter.h>
-#include <ifcgeom/schema_agnostic/IfcGeomIterator.h>
+#include <ifcgeom/IfcGeomFilter.h>
+#include <ifcgeom/Iterator.h>
 
 #include <string>
 
@@ -81,7 +81,7 @@ struct shape_callback {
 struct process_geometries {
 	geobim_settings settings;
 	opening_collector all_openings;
-	std::list<ifcopenshell::geometry::Iterator*> iterators;
+	std::list<IfcGeom::Iterator*> iterators;
 
 	process_geometries(geobim_settings&);
 	~process_geometries();
