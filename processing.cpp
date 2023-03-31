@@ -49,7 +49,6 @@ process_geometries::process_geometries(geobim_settings& s)
 {}
 
 process_geometries::~process_geometries() {
-	std::cout << "~process_geometries()" << std::endl;
 	for (auto& x : iterators) {
 		delete x;
 	}
@@ -112,13 +111,6 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 				break;
 			}
 
-			if (geom_object->guid() == "3es57B9Kr3nxL4uBITV$0e") {
-				std::cout << "NOTICE Skipping: " << geom_object->product()->data().toString() << std::endl;
-				continue;
-			}
-
-			std::cout << "Processing: " << geom_object->product()->data().toString() << std::endl;
-
 			const auto& n = geom_object->transformation().data().ccomponents();
 			const cgal_placement_t element_transformation(
 				n(0, 0), n(0, 1), n(0, 2), n(0, 3),
@@ -135,11 +127,10 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 				openings.push_back(it->second);
 			}
 
-			std::cout << openings.size() << " openings" << std::endl;
-
 			if (settings.apply_openings_posthoc && geom_object->product()->declaration().is("IfcWall")) {
 				auto T2 = timer::measure("wall_axis_handling");
-				auto item = geometry_mapper->map(geom_object->product());
+				auto rep = geometry_mapper->representation_of(geom_object->product());
+				auto item = rep ? geometry_mapper->map(rep) : nullptr;
 				if (item) {
 					typedef ifcopenshell::geometry::taxonomy::collection cl;
 					typedef ifcopenshell::geometry::taxonomy::loop l;
@@ -148,13 +139,11 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 
 					if (item->kind() == ifcopenshell::geometry::taxonomy::COLLECTION &&
 						((cl*)item)->children.size() == 1 &&
-						((cl*)item)->children[0]->kind() == ifcopenshell::geometry::taxonomy::COLLECTION &&
-						((cl*)((cl*)item)->children[0])->children.size() == 1 &&
-						((cl*)((cl*)item)->children[0])->children[0]->kind() == ifcopenshell::geometry::taxonomy::LOOP &&
-						((l*)((cl*)((cl*)item)->children[0])->children[0])->children.size() == 1 &&
-						((l*)((cl*)((cl*)item)->children[0])->children[0])->children[0]->kind() == ifcopenshell::geometry::taxonomy::EDGE)
+						(((cl*)item)->children[0])->kind() == ifcopenshell::geometry::taxonomy::LOOP &&
+						((l*)(((cl*)item)->children[0]))->children.size() == 1 &&
+						((l*)(((cl*)item)->children[0]))->children[0]->kind() == ifcopenshell::geometry::taxonomy::EDGE)
 					{
-						auto edge = (e*)((l*)((cl*)((cl*)item)->children[0])->children[0])->children[0];
+						auto edge = (e*)((l*)(((cl*)item)->children[0]))->children[0];
 						if (edge->basis == nullptr && edge->start.which() == 0 && edge->end.which() == 0) {
 							const auto& p0 = boost::get<p>(edge->start);
 							const auto& p1 = boost::get<p>(edge->end);
@@ -162,8 +151,8 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 							Eigen::Vector4d P1 = p1.ccomponents().homogeneous();
 							auto V0 = n * P0;
 							auto V1 = n * P1;
-							std::cout << "Axis " << V0(0) << " " << V0(1) << " " << V0(2) << " -> "
-								<< V1(0) << " " << V1(1) << " " << V1(2) << std::endl;
+							// std::cout << "Axis " << V0(0) << " " << V0(1) << " " << V0(2) << " -> "
+							// 	<< V1(0) << " " << V1(1) << " " << V1(2) << std::endl;
 							wall_direction = (V1 - V0).head<3>().normalized();
 						}
 					}
@@ -205,10 +194,10 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 
 				fn(item);
 
-				std::cout << "Processed: " << geom_object->product()->data().toString() << " part: #" << g.ItemId() << std::endl;
+				// std::cout << "Processed: " << geom_object->product()->data().toString() << " part: #" << g.ItemId() << std::endl;
 			}
 
-			std::cout << "Progress: " << context_iterator.progress() << std::endl;
+			// std::cout << "Progress: " << context_iterator.progress() << std::endl;
 
 		}
 

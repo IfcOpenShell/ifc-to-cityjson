@@ -6,6 +6,7 @@
 #include <string>
 #include <chrono>
 #include <mutex>
+#include <ifcparse/IfcLogger.h>
 
 class timer {
 	typedef std::map<std::string, double> timings_map;
@@ -54,6 +55,12 @@ public:
 		for (auto& p : i().timings_) {
 			s << p.first << std::string(max_key_length - p.first.size(), ' ') << ":" << p.second << std::endl;
 		}
+	}
+
+	static void log() {
+		std::ostringstream oss;
+		print(oss);
+		Logger::Message(Logger::LOG_PERF, oss.str());
 	}
 };
 

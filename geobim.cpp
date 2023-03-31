@@ -14,6 +14,8 @@
 #include "radius_comparison.h"
 #include "geobim.h"
 
+#include <ifcparse/IfcLogger.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/classification.hpp>
 
@@ -106,7 +108,7 @@ void perform(geobim_settings settings) {
 
 		cec.run(std::ref(callback_global));
 
-		std::cout << "done processing geometries" << std::endl;
+		Logger::Notice("done processing geometries");
 
 		for (auto& f : settings.file) {
 			delete f;
@@ -177,7 +179,8 @@ void perform(geobim_settings settings) {
 				write_city.finalize();
 			}
 
-			if (!settings.obj_output_filename.empty()) {	
+			if (!settings.obj_output_filename.empty()) {
+				write_obj.begin();
 				output_writer<simple_obj_writer> vis{ write_obj };
 				boost::apply_visitor(vis, style_facet_pairs);
 				write_obj.finalize();
@@ -203,5 +206,5 @@ void perform(geobim_settings settings) {
 
 	}
 
-	timer::print(std::cout);
+	timer::log();
 }

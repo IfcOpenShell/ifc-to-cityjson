@@ -129,12 +129,17 @@ struct simple_obj_writer : public abstract_writer {
 	int vertex_count = 1;
 	std::ofstream obj, mtl;
 	rgb GRAY;
+	std::string fn_prefix_;
 
 	simple_obj_writer(const std::string& fn_prefix)
-		: obj((fn_prefix).c_str())
-		, mtl((fn_prefix.substr(0, fn_prefix.size() - 4) + ".mtl").c_str())
-		, GRAY(0.6, 0.6, 0.6) {
-		obj << "mtllib " << fn_prefix << ".mtl\n";
+		: fn_prefix_(fn_prefix)
+		, GRAY(0.6, 0.6, 0.6)
+	{}
+
+	void begin() {
+		obj.open((fn_prefix_).c_str());
+		mtl.open((fn_prefix_.substr(0, fn_prefix_.size() - 4) + ".mtl").c_str());
+		obj << "mtllib " << fn_prefix_ << ".mtl\n";
 	}
 
 	// @todo make the Kernel or Point_3 type discoverable from this template

@@ -2,6 +2,7 @@
 #include "writer.h"
 
 #include <ifcconvert/validation_utils.h>
+#include <ifcparse/IfcLogger.h>
 
 #include <CGAL/exceptions.h>
 #include <CGAL/minkowski_sum_3.h>
@@ -113,10 +114,10 @@ namespace {
 		std::map<P, size_t> clusters;
 		boost::associative_property_map<std::map<P, size_t>> clusters_map(clusters);
 
-		std::cout << "Clustering with radius " << r << std::endl;
+		Logger::Notice("Clustering with radius " + std::to_string(r));
 
 		int n = CGAL::cluster_point_set(points, clusters_map, CGAL::parameters::neighbor_radius(r));
-		std::cout << n << " clusters" << std::endl;
+		Logger::Notice(std::to_string(n) + " clusters");
 
 		std::vector<average_point<K>> new_points_accum(n);
 		for (auto& p : clusters) {
@@ -154,7 +155,6 @@ namespace {
 			std::set<size_t> s(it->begin(), it->end());
 			if (triangle_use[s] == 2) {
 				it = new_indices.erase(it);
-				std::cerr << "erasing" << std::endl;
 			}
 		}
 
@@ -406,12 +406,10 @@ namespace {
 
 		size_t num = std::distance(begin, end);
 
-		std::cout << "\n";
-
 		for (auto face = begin; face != end; ++face) {
 
 			if (!face->is_triangle()) {
-				std::cout << "Warning: non-triangular face!" << std::endl;
+				Logger::Warning("non-triangular face!");
 				continue;
 			}
 
@@ -427,7 +425,7 @@ namespace {
 
 			double A = std::sqrt(CGAL::to_double(CGAL::Triangle_3<typename Poly::Traits::Kernel>(points[0], points[1], points[2]).squared_area()));
 			if (A < (1.e-5 * 1.e-5 * 0.5)) {
-				std::cout << "Skipping triangle with area " << A << std::endl;
+				// Logger::Warning("Skipping triangle with area " + std::to_string(A));
 				continue;
 			}
 
@@ -439,15 +437,7 @@ namespace {
 
 			CGAL::Nef_polyhedron_3<Kernel_> padded = CGAL::minkowski_sum_3(Tnef, padding_volume);
 			accum.add_polyhedron(padded);
-
-			auto n = std::distance(begin, face);
-			if (n % 100) {
-				std::cout << "\r" << (n * 100 / num) << "%";
-				std::cout.flush();
-			}
 		}
-
-		std::cout << "\n";
 
 		result = accum.get_union();
 	}
@@ -466,7 +456,7 @@ namespace {
 			.halfedge_index_map(get(CGAL::halfedge_external_index, poly_triangulated))
 			.get_cost(SMS::Edge_length_cost<TriangleKernel>()));
 
-		std::cout << "Removed " << r << " edges" << std::endl;
+		Logger::Notice("Removed " + std::to_string(r) + " edges");
 
 		size_t n_threads = std::thread::hardware_concurrency();
 		size_t n_facets = poly_triangulated.size_of_facets();
@@ -587,7 +577,7 @@ public:
 		CGAL::Polyhedron_3<CGAL::Epick> poly_triangulated;
 		util::copy::polyhedron(poly_triangulated, item.polyhedron);
 		if (!CGAL::Polygon_mesh_processing::triangulate_faces(poly_triangulated)) {
-			std::cerr << "unable to triangulate all faces" << std::endl;
+			Logger::Error("unable to triangulate all faces");
 			return;
 		}
 
@@ -601,11 +591,11 @@ public:
 		bool item_nef_succeeded = false;
 		if (self_intersections.empty()) {
 			if (!(item_nef_succeeded = item.to_nef_polyhedron(item_nef, threaded_))) {
-				std::cerr << "no nef for product" << std::endl;
+				Logger::Error("no nef for product");
 			}
 		}
 		else {
-			std::cerr << "self intersections, not trying to convert to Nef" << std::endl;
+			Logger::Error("self intersections, not trying to convert to Nef");
 		}
 
 		bool result_set = false;
@@ -628,7 +618,7 @@ public:
 				result_set = true;
 			} catch (CGAL::Failure_exception&) {
 				failed = true;
-				std::cerr << "Minkowski on volume failed, retrying with individual triangles" << std::endl;
+				Logger::Error("Minkowski on volume failed, retrying with individual triangles");
 			}
 			T0.stop();
 		}
@@ -638,7 +628,7 @@ public:
 		for (auto &face : faces(poly_triangulated)) {
 
 			if (!face->is_triangle()) {
-				std::cout << "Warning: non-triangular face!" << std::endl;
+				Logger::Warning("non-triangular face!");
 				continue;
 			}
 
@@ -662,10 +652,10 @@ public:
 		if (!result_set && (poly_triangulated.size_of_facets() > 1000 || max_triangle_area < 1.e-5)) {
 
 			if (poly_triangulated.size_of_facets() > 1000) {
-				std::cerr << "Too many individual triangles, using bounding box" << std::endl;
+				Logger::Error("Too many individual triangles, using bounding box");
 			}
 			else {
-				std::cerr << "Max triangle area is " << max_triangle_area << ", using bounding box" << std::endl;
+				Logger::Error("Max triangle area is " + std::to_string(max_triangle_area) + ", using bounding box");
 			}
 			auto bb = CGAL::Polygon_mesh_processing::bbox(item.polyhedron);
 			cgal_point_t lower(bb.min(0) - radius, bb.min(1) - radius, bb.min(2) - radius);
@@ -679,7 +669,7 @@ public:
 			auto T2 = timer::measure("self_intersection_handling");
 
 			if (self_intersections.size()) {
-				std::cerr << self_intersections.size() << " self-intersections for product" << std::endl;
+				Logger::Error(std::to_string(self_intersections.size()) + " self-intersections for product");
 			}
 
 			minkowski_sum_triangles_single_threaded<CGAL::Polyhedron_3<CGAL::Epick>>(
@@ -773,19 +763,19 @@ public:
 				// (applied now by the IfcOpenShell build script)
 				// these fixes are not necessary anymore.
 				if ((max_dot - min_dot) < radius * 2) {
-					std::cerr << "Opening too narrow to have effect after incorporating radius, skipping" << std::endl;
+					Logger::Error("Opening too narrow to have effect after incorporating radius, skipping");
 					continue;
 				}
 
 				if ((max_z - min_z) < radius * 2) {
-					std::cerr << "Opening too narrow to have effect after incorporating radius, skipping" << std::endl;
+					Logger::Error("Opening too narrow to have effect after incorporating radius, skipping");
 					continue;
 				}
 
 				auto bounds = create_bounding_box(op->polyhedron, radius);
 				CGAL::Nef_polyhedron_3<Kernel_> opening_nef;
 				if (!op->to_nef_polyhedron(opening_nef, threaded_)) {
-					std::cerr << "no nef for opening" << std::endl;
+					Logger::Error("no nef for opening");
 					continue;
 				}
 				opening_nef.transform(op->transformation);
@@ -820,7 +810,7 @@ void radius_execution_context::operator()(shape_callback_item* item) {
 	if (it != first_product_for_geom_id.end()) {
 		if (it->second != item->src) {
 			if (reused_products.find(item->src) == reused_products.end()) {
-				std::cout << "Reused " << it->second << std::endl;
+				Logger::Notice("Reused " + it->second->data().toString());
 				reused_products.insert({ item->src, {
 					it->second,
 					placements.find(it->second)->second,
@@ -973,7 +963,7 @@ void radius_execution_context::extract_in_place(cgal_shape_t& input, extract_com
 	}
 
 	for (auto& p : component_sizes) {
-		std::cout << "component " << p.first << " has " << p.second << " and area " << component_areas[p.first] << std::endl;
+		Logger::Notice("component " + std::to_string(p.first) + " has " + std::to_string(p.second) + " and area " + std::to_string(component_areas[p.first]));
 	}
 
 	typedef std::map<vertex_descriptor, std::size_t>   Internal_vertex_map;
@@ -1036,10 +1026,10 @@ void radius_execution_context::finalize() {
 				fu.get();
 			}
 			catch (std::exception& e) {
-				std::cerr << e.what() << std::endl;
+				Logger::Error(e.what());
 			}
 			catch (...) {
-				std::cerr << "unkown error" << std::endl;
+				Logger::Error("unkown error");
 			}
 		}
 	}
@@ -1104,7 +1094,7 @@ void radius_execution_context::finalize() {
 
 			poly_simple.normalize_border();
 			if (!poly_simple.is_valid(false, 1)) {
-				std::cerr << "invalid before clustering" << std::endl;
+				Logger::Error("invalid before clustering");
 				return;
 			}
 
@@ -1309,7 +1299,7 @@ void radius_execution_context::finalize() {
 			CGAL::Polyhedron_3<CGAL::Epick> poly_triangulated;
 			util::copy::polyhedron(poly_triangulated, polyhedron_exterior);
 			if (!CGAL::Polygon_mesh_processing::triangulate_faces(poly_triangulated)) {
-				std::cerr << "unable to triangulate all faces" << std::endl;
+				Logger::Error("unable to triangulate all faces");
 				return;
 			}
 
@@ -1337,6 +1327,6 @@ void radius_execution_context::finalize() {
 		T2.stop();
 	}
 
-	std::cout << "exterior poly num facets: " << polyhedron_exterior.size_of_facets() << std::endl;
+	Logger::Notice("exterior poly num facets: " + std::to_string(polyhedron_exterior.size_of_facets()));
 }
 
