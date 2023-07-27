@@ -14,7 +14,7 @@ struct shape_callback_item {
 	std::string id, type, part_reference, geom_reference;
 	cgal_placement_t transformation;
 	cgal_shape_t polyhedron;
-	const ifcopenshell::geometry::taxonomy::style* style;
+	ifcopenshell::geometry::taxonomy::style::ptr style;
 	boost::optional<Eigen::Vector3d> wall_direction;
 	std::list<shape_callback_item*> openings;
 

@@ -111,7 +111,7 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 				break;
 			}
 
-			const auto& n = geom_object->transformation().data().ccomponents();
+			const auto& n = geom_object->transformation().data()->ccomponents();
 			const cgal_placement_t element_transformation(
 				n(0, 0), n(0, 1), n(0, 2), n(0, 3),
 				n(1, 0), n(1, 1), n(1, 2), n(1, 3),
@@ -136,17 +136,17 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 					typedef ifcopenshell::geometry::taxonomy::loop l;
 					typedef ifcopenshell::geometry::taxonomy::edge e;
 					typedef ifcopenshell::geometry::taxonomy::point3 p;
+					using ifcopenshell::geometry::taxonomy::cast;
 
-					if (item->kind() == ifcopenshell::geometry::taxonomy::COLLECTION &&
-						((cl*)item)->children.size() == 1 &&
-						(((cl*)item)->children[0])->kind() == ifcopenshell::geometry::taxonomy::LOOP &&
-						((l*)(((cl*)item)->children[0]))->children.size() == 1 &&
-						((l*)(((cl*)item)->children[0]))->children[0]->kind() == ifcopenshell::geometry::taxonomy::EDGE)
+					if ((item->kind() == ifcopenshell::geometry::taxonomy::COLLECTION) &&
+						(cast<cl>(item)->children.size() == 1) &&
+						((cast<cl>(item)->children[0])->kind() == ifcopenshell::geometry::taxonomy::LOOP) &&
+						(cast<l>(((cast<cl>(item)->children[0])))->children.size() == 1))
 					{
-						auto edge = (e*)((l*)(((cl*)item)->children[0]))->children[0];
+						auto edge = cast<l>(cast<cl>(item)->children[0])->children[0];
 						if (edge->basis == nullptr && edge->start.which() == 0 && edge->end.which() == 0) {
-							const auto& p0 = boost::get<p>(edge->start);
-							const auto& p1 = boost::get<p>(edge->end);
+							const auto& p0 = *boost::get<typename p::ptr>(edge->start);
+							const auto& p1 = *boost::get<typename p::ptr>(edge->end);
 							Eigen::Vector4d P0 = p0.ccomponents().homogeneous();
 							Eigen::Vector4d P1 = p1.ccomponents().homogeneous();
 							auto V0 = n * P0;
@@ -162,7 +162,7 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 
 			for (auto& g : geom_object->geometry()) {
 				auto s = ((ifcopenshell::geometry::CgalShape*) g.Shape())->shape();
-				const auto& m = g.Placement().ccomponents();
+				const auto& m = g.Placement()->ccomponents();
 
 				const cgal_placement_t part_transformation(
 					m(0, 0), m(0, 1), m(0, 2), m(0, 3),
@@ -174,9 +174,9 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 					vertex->point() = vertex->point().transform(part_transformation);
 				}
 
-				const ifcopenshell::geometry::taxonomy::style* opt_style = nullptr;
+				ifcopenshell::geometry::taxonomy::style::ptr opt_style;
 				if (g.hasStyle()) {
-					opt_style = &g.Style();
+					opt_style = g.StylePtr();
 				}
 
 				shape_callback_item* item = new shape_callback_item{
