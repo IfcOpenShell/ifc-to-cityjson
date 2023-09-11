@@ -942,7 +942,11 @@ void radius_execution_context::extract_in_place(cgal_shape_t& input, extract_com
 		boost::property_map<cgal_shape_t, boost::face_external_index_t>::type>
 		fsm(fim);
 
+#if CGAL_VERSION_NR < 1050500000
 	auto ffim = CGAL::Polygon_mesh_processing::parameters::face_index_map(fim);
+#else
+	auto ffim = CGAL::parameters::face_index_map(fim);
+#endif
 
 	CGAL::Polygon_mesh_processing::connected_components(
 		input, 
@@ -988,7 +992,11 @@ void radius_execution_context::extract_in_place(cgal_shape_t& input, extract_com
 		input,
 		components_to_keep,
 		fsm,
+#if CGAL_VERSION_NR < 1050500000
 		CGAL::Polygon_mesh_processing::parameters::vertex_index_map(vertex_index_map));
+#else
+		CGAL::parameters::vertex_index_map(vertex_index_map));
+#endif
 }
 
 cgal_shape_t radius_execution_context::extract(const cgal_shape_t& input, extract_component component) const {
