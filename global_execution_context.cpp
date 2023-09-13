@@ -111,11 +111,15 @@ typename global_execution_context<TreeKernel>::segmentation_return_type global_e
 
 template<typename TreeKernel>
 void global_execution_context<TreeKernel>::operator()(shape_callback_item* item) {
-	rgb* diffuse = item->style ? new rgb(item->style->diffuse.ccomponents()) : (rgb*) nullptr;
+
 	item_info* info = new item_info{
+		(int) item->src->data().id(),
+		// @todo
+		0, // parent_id
 		item->src->declaration().name(),
 		item->src->get_value<std::string>("GlobalId"),
-		diffuse
+		item->src->get_value<std::string>("Name", ""),
+		item->style
 	};
 	infos.push_back(info);
 

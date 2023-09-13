@@ -5,6 +5,10 @@
 
 #include <ifcgeom/kernels/cgal/CgalKernel.h>
 
+#include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
+
+#include <boost/make_shared.hpp>
+
 #include <nlohmann/json.hpp>
 
 #include <array>
@@ -145,7 +149,7 @@ struct simple_obj_writer : public abstract_writer {
 	// @todo make the Kernel or Point_3 type discoverable from this template
 	template <typename It>
 	void operator()(const item_info* info, It begin, It end) {
-		const auto& diffuse = info && info->diffuse ? *info->diffuse : GRAY;
+		auto diffuse = info && info->style && info->style->diffuse ? rgb(info->style->diffuse.ccomponents()) : GRAY;
 
 		obj << "g " << (info ? info->guid : "unknown") << "\n";
 		obj << "usemtl m" << group_id << "\n";
@@ -251,7 +255,7 @@ struct city_json_writer : public abstract_writer {
 
 	template <typename It>
 	void operator()(const item_info* info, It begin, It end) {
-		const auto& diffuse = info && info->diffuse ? *info->diffuse : GRAY;
+		auto diffuse = info && info->style && info->style->diffuse ? rgb(info->style->diffuse.ccomponents()) : GRAY;
 
 		json material = json::object();
 		material["name"] = "material-" + boost::lexical_cast<std::string>(materials.size());
@@ -260,6 +264,8 @@ struct city_json_writer : public abstract_writer {
 		material["shininess"] = 0.;
 		material["isSmooth"] = false;
 		materials.push_back(material);
+
+		std::wcout << "PC id " << (info ? info->id : 0) << " " << std::distance(begin, end) << std::endl;
 
 		for (auto it = begin; it != end; ++it) {
 			auto points = points_from_facet(it);
@@ -348,6 +354,54 @@ struct external_element_collector : public abstract_writer {
 
 		std::ofstream(filename.c_str()) << data;
 	}
+};
+
+struct polyhedron_collector : public abstract_writer {
+	std::list<IfcGeom::Element*> elems;
+
+	template <typename It>
+	void operator()(const item_info* info, It begin, It end) {
+		std::vector<std::array<size_t, 3>> fs;
+		for (auto it = begin; it != end; ++it) {
+			fs.push_back(point_indices_from_facet(it));
+		}
+		if (cache.which() != 1) {
+			return;
+			// @nb make sure exact segmentation is on.
+			// @todo serialize CgalShapeSimple() otherwise
+		}
+
+		cgal_shape_t P;
+		CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(boost::get<vertex_cache<cgal_point_t>>(cache).vertex_points, fs, P);
+		P.normalize_border();
+
+		IfcGeom::ConversionResults shapes;
+		shapes.push_back(IfcGeom::ConversionResult(0, new CgalShape(P), info ? info->style : taxonomy::style::ptr(nullptr)));
+
+		IfcGeom::IteratorSettings s;
+		s.set(IfcGeom::IteratorSettings::WELD_VERTICES, false);
+		IfcGeom::ElementSettings settings(s, 1., info ? info->entity_type : std::string(""));
+
+		IfcGeom::BRepElement brep(
+			info ? info->id : 0,
+			info ? info->parent_id : 0,
+			info ? info->name : std::string(""),
+			info ? info->entity_type : std::string(""),
+			info ? info->guid : std::string(""),
+			"exterior", // context
+			// @todo should we have an option to use local coordinates? (i.e multiple with placement inverse here?)
+			taxonomy::make<ifcopenshell::geometry::taxonomy::matrix4>(), // ifcopenshell::geometry::taxonomy::matrix4::ptr
+			boost::make_shared<IfcGeom::Representation::BRep>(settings, std::to_string(info ? info->id : 0) + "-exterior", shapes), // boost::shared_ptr<IfcGeom::Representation::BRep>& geometry
+			// @todo can this remain nullptr safely?
+			nullptr // IfcUtil::IfcBaseEntity* product
+		);
+
+		// @todo based on settings
+		auto tri = new IfcGeom::TriangulationElement(brep);
+		elems.push_back(tri);
+	}
+
+	void do_finalize() {}
 };
 
 #endif

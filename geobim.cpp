@@ -48,6 +48,11 @@ int main(int argc, char** argv) {
 #endif
 
 void perform(geobim_settings settings) {
+	std::list<IfcGeom::Element*> discard;
+	perform(settings, discard);
+}
+
+void perform(geobim_settings settings, std::list<IfcGeom::Element*>& elems) {
 	// global_execution_context<CGAL::Simple_cartesian<double>> global_context;
 	// Epick seems to have better performance?
 	global_execution_context<CGAL::Epick> global_context;
@@ -150,6 +155,7 @@ void perform(geobim_settings settings) {
 			city_json_writer write_city(settings.cityjson_output_filename.empty() ? settings.output_filename + c->radius_str + ".city.json" : settings.cityjson_output_filename);
 			simple_obj_writer write_obj(settings.obj_output_filename.empty() ? settings.output_filename + c->radius_str + ".obj" : settings.obj_output_filename);
 			external_element_collector write_elem(settings.json_output_filename.empty() ? settings.output_filename + ".external.json" : settings.json_output_filename, all_infos);
+			polyhedron_collector capture_polies;
 
 			boost::variant<
 				global_execution_context<Kernel_>::segmentation_return_type,
@@ -190,6 +196,13 @@ void perform(geobim_settings settings) {
 				output_writer<external_element_collector> vis{ write_elem };
 				boost::apply_visitor(vis, style_facet_pairs);
 				write_elem.finalize();
+			}
+
+			{
+				output_writer<polyhedron_collector> vis{ capture_polies };
+				boost::apply_visitor(vis, style_facet_pairs);
+				write_elem.finalize();
+				elems.insert(elems.end(), capture_polies.elems.begin(), capture_polies.elems.end());
 			}
 		}
 

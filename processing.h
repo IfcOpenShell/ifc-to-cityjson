@@ -40,9 +40,12 @@ struct rgb : public std::pair<double, std::pair<double, double>> {
 struct item_info {
 	// @nb we don't store a reference to the ifcopenshell entity instance so the files can be freed from memory
 	// we can store a const reference to the ifcopenshell latebound schema type names.
+	int id;
+	int parent_id;
 	const std::string& entity_type;
 	std::string guid;
-	rgb* diffuse;
+	std::string name;
+	ifcopenshell::geometry::taxonomy::style::ptr style;
 };
 
 struct debug_writer : public execution_context {
