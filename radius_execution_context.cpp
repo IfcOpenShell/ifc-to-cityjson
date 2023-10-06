@@ -574,6 +574,10 @@ public:
 	void operator()(shape_callback_item item, CGAL::Nef_polyhedron_3<Kernel_>& result) {
 #endif
 
+		if (item.polyhedron.size_of_facets() == 0) {
+			return;
+		}
+
 		CGAL::Polyhedron_3<CGAL::Epick> poly_triangulated;
 		util::copy::polyhedron(poly_triangulated, item.polyhedron);
 		if (!CGAL::Polygon_mesh_processing::triangulate_faces(poly_triangulated)) {
@@ -653,13 +657,21 @@ public:
 
 			if (poly_triangulated.size_of_facets() > 1000) {
 				Logger::Error("Too many individual triangles, using bounding box");
-			}
-			else {
+			} else {
 				Logger::Error("Max triangle area is " + std::to_string(max_triangle_area) + ", using bounding box");
 			}
 			auto bb = CGAL::Polygon_mesh_processing::bbox(item.polyhedron);
 			cgal_point_t lower(bb.min(0) - radius, bb.min(1) - radius, bb.min(2) - radius);
 			cgal_point_t upper(bb.max(0) + radius, bb.max(1) + radius, bb.max(2) + radius);
+
+			/*std::wcout << CGAL::to_double((upper - lower).squared_length()) << std::endl;
+			std::cin.get();*/
+
+			if ((upper - lower).squared_length() == 0) {
+				Logger::Error("Zero extent bounding box, skipping");
+				return;
+			}
+
 			auto bbpl = ifcopenshell::geometry::utils::create_cube(lower, upper);
 			result = ifcopenshell::geometry::utils::create_nef_polyhedron(bbpl);
 
@@ -1255,81 +1267,81 @@ void radius_execution_context::finalize() {
 				tmp_debug(nullptr, polyhedron_exterior.facets_begin(), polyhedron_exterior.facets_end());
 			}
 
+//#if 0
+			if (!minkowski_triangles_) {
+				exterior = ifcopenshell::geometry::utils::create_nef_polyhedron(polyhedron_exterior);
+				auto bounding_box = create_bounding_box(polyhedron_exterior, radius);
+
+				auto complement = bounding_box - exterior;
+				complement.extract_regularization();
+				// @nb padding cube is potentially slightly larger to result in a thinner result
+				// then another radius for comparison.
+				auto complement_padded = CGAL::minkowski_sum_3(complement, this->padding_volumes_.front().second);
+				complement_padded.extract_regularization();
+				T2.stop();
+
+				{
+					auto T = timer::measure("result_nef_to_poly");
 #if 0
-
-			exterior = ifcopenshell::geometry::utils::create_nef_polyhedron(polyhedron_exterior);
-			bounding_box = create_bounding_box(polyhedron_exterior);
-
-			complement = bounding_box - exterior;
-			complement.extract_regularization();
-			// @nb padding cube is potentially slightly larger to result in a thinner result
-			// then another radius for comparison.
-			complement_padded = complement; // CGAL::minkowski_sum_3(complement, padding_volume_2);
-			complement_padded.extract_regularization();
-			T2.stop();
-
-			{
-				auto T = timer::measure("result_nef_to_poly");
-#if 0
-				// @todo I imagine this operation is costly, we can also convert the padded complement to
-				// polyhedron, and remove the connected component that belongs to the bbox, then reverse
-				// the remaining poly to point to the interior?
-				exterior -= complement_padded;
+					// @todo I imagine this operation is costly, we can also convert the padded complement to
+					// polyhedron, and remove the connected component that belongs to the bbox, then reverse
+					// the remaining poly to point to the interior?
+					exterior -= complement_padded;
 #else
-				// Rougly twice as fast as the complexity is half (box complexity is negligable).
+					// Rougly twice as fast as the complexity is half (box complexity is negligable).
 
-				// Re above: extracting the interior shell did not prove to be reliable even with
-				// the undocumented function convert_inner_shell_to_polyhedron(). Therefore we
-				// subtract from the padded box as that will have lower complexity than above.
-				// Mark_bounded_volumes on the completement also did not work.
-				exterior = bounding_box - complement_padded;
+					// Re above: extracting the interior shell did not prove to be reliable even with
+					// the undocumented function convert_inner_shell_to_polyhedron(). Therefore we
+					// subtract from the padded box as that will have lower complexity than above.
+					// Mark_bounded_volumes on the completement also did not work.
+					exterior = bounding_box - complement_padded;
 #endif
-				T.stop();
+					T.stop();
+				}
+
+				exterior.extract_regularization();
+
+				if (exterior.is_simple()) {
+					auto T1 = timer::measure("result_nef_to_poly");
+					polyhedron_exterior = ifcopenshell::geometry::utils::create_polyhedron(exterior);
+					T1.stop();
+
+					auto vol = CGAL::Polygon_mesh_processing::volume(polyhedron_exterior);
+					// std::cout << "Volume with radius " << radius << " is " << vol << std::endl;
+				} else {
+					CGAL::convert_nef_polyhedron_to_polygon_mesh(exterior, polyhedron_exterior);
+					// std::cout << "Result with radius " << radius << " is not manifold" << std::endl;
+				}
+
+				//#else
+			} else {
+
+				CGAL::Polyhedron_3<CGAL::Epick> poly_triangulated;
+				util::copy::polyhedron(poly_triangulated, polyhedron_exterior);
+				if (!CGAL::Polygon_mesh_processing::triangulate_faces(poly_triangulated)) {
+					Logger::Error("unable to triangulate all faces");
+					return;
+				}
+
+				auto padding_volume = construct_padding_volume_(narrower_
+					? (this->radius + 1e-7) // sightly higher so volume get's a little bit inset
+					: this->radius);
+
+				minkowski_sum_triangles_single_threaded<CGAL::Polyhedron_3<CGAL::Epick>>(
+					poly_triangulated.facets_begin(),
+					poly_triangulated.facets_end(),
+					padding_volume, exterior
+					);
+
+				if (exterior.is_simple()) {
+					polyhedron_exterior = ifcopenshell::geometry::utils::create_polyhedron(exterior);
+				} else {
+					CGAL::convert_nef_polyhedron_to_polygon_mesh(exterior, polyhedron_exterior);
+				}
+
+				extract_in_place(polyhedron_exterior, SECOND_LARGEST_AREA);
 			}
-
-			exterior.extract_regularization();
-
-			if (exterior.is_simple()) {
-				auto T1 = timer::measure("result_nef_to_poly");
-				polyhedron_exterior = ifcopenshell::geometry::utils::create_polyhedron(exterior);
-				T1.stop();
-
-				auto vol = CGAL::Polygon_mesh_processing::volume(polyhedron_exterior);
-				std::cout << "Volume with radius " << radius << " is " << vol << std::endl;
-			}
-			else {
-				CGAL::convert_nef_polyhedron_to_polygon_mesh(exterior, polyhedron_exterior);
-				std::cout << "Result with radius " << radius << " is not manifold" << std::endl;
-			}
-
-#else
-
-			CGAL::Polyhedron_3<CGAL::Epick> poly_triangulated;
-			util::copy::polyhedron(poly_triangulated, polyhedron_exterior);
-			if (!CGAL::Polygon_mesh_processing::triangulate_faces(poly_triangulated)) {
-				Logger::Error("unable to triangulate all faces");
-				return;
-			}
-
-			auto padding_volume = construct_padding_volume_(narrower_ 
-				? (this->radius + 1e-7) // sightly higher so volume get's a little bit inset
-				: this->radius);
-
-			minkowski_sum_triangles_single_threaded<CGAL::Polyhedron_3<CGAL::Epick>>(
-				poly_triangulated.facets_begin(),
-				poly_triangulated.facets_end(),
-				padding_volume, exterior
-				);
-
-			if (exterior.is_simple()) {
-				polyhedron_exterior = ifcopenshell::geometry::utils::create_polyhedron(exterior);
-			}
-			else {
-				CGAL::convert_nef_polyhedron_to_polygon_mesh(exterior, polyhedron_exterior);
-			}
-
-			extract_in_place(polyhedron_exterior, SECOND_LARGEST_AREA);
-#endif
+//#endif
 		}
 
 		T2.stop();

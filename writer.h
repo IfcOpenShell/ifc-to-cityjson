@@ -390,8 +390,8 @@ struct polyhedron_collector : public abstract_writer {
 			info ? info->guid : std::string(""),
 			"exterior", // context
 			// @todo should we have an option to use local coordinates? (i.e multiple with placement inverse here?)
-			taxonomy::make<ifcopenshell::geometry::taxonomy::matrix4>(), // ifcopenshell::geometry::taxonomy::matrix4::ptr
-			boost::make_shared<IfcGeom::Representation::BRep>(settings, std::to_string(info ? info->id : 0) + "-exterior", shapes), // boost::shared_ptr<IfcGeom::Representation::BRep>& geometry
+			taxonomy::make<ifcopenshell::geometry::taxonomy::matrix4>(),
+			boost::make_shared<IfcGeom::Representation::BRep>(settings, std::to_string(info ? info->id : 0) + "-" + std::to_string(elems.size()) + "-exterior", shapes), // boost::shared_ptr<IfcGeom::Representation::BRep>& geometry
 			// @todo can this remain nullptr safely?
 			nullptr // IfcUtil::IfcBaseEntity* product
 		);
