@@ -25,7 +25,7 @@ struct geobim_settings {
 	
 	std::vector<std::string> radii;
 	bool apply_openings, apply_openings_posthoc, debug, exact_segmentation, minkowski_triangles, no_erosion, spherical_padding;
-	IfcGeom::IteratorSettings settings;
+	ifcopenshell::geometry::Settings settings;
 	boost::optional<std::set<std::string>> entity_names;
 	bool entity_names_included;
 	std::vector<IfcParse::IfcFile*> file;

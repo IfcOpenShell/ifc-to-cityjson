@@ -92,8 +92,8 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 		size_t num_created = 0;
 
 		auto axis_settings = settings.settings;
-		axis_settings.set(IfcGeom::IteratorSettings::EXCLUDE_SOLIDS_AND_SURFACES, true);
-		axis_settings.set(IfcGeom::IteratorSettings::INCLUDE_CURVES, true);
+		axis_settings.get<ifcopenshell::geometry::settings::IncludeSurfaces>().value = false;
+		axis_settings.get<ifcopenshell::geometry::settings::IncludeCurves>().value = true;
 		auto geometry_mapper = ifcopenshell::geometry::impl::mapping_implementations().construct(f, axis_settings);
 
 		for (;; ++num_created) {
@@ -161,7 +161,7 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 			}
 
 			for (auto& g : geom_object->geometry()) {
-				auto s = ((ifcopenshell::geometry::CgalShape*) g.Shape())->shape();
+				auto s = std::static_pointer_cast<ifcopenshell::geometry::CgalShape>(g.Shape())->poly();
 				const auto& m = g.Placement()->ccomponents();
 
 				const cgal_placement_t part_transformation(

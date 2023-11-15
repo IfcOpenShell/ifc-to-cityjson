@@ -376,11 +376,10 @@ struct polyhedron_collector : public abstract_writer {
 		P.normalize_border();
 
 		IfcGeom::ConversionResults shapes;
-		shapes.push_back(IfcGeom::ConversionResult(0, new CgalShape(P), info ? info->style : taxonomy::style::ptr(nullptr)));
+		shapes.push_back(IfcGeom::ConversionResult(0, new ifcopenshell::geometry::CgalShape(P), info ? info->style : ifcopenshell::geometry::taxonomy::style::ptr(nullptr)));
 
-		IfcGeom::IteratorSettings s;
-		s.set(IfcGeom::IteratorSettings::WELD_VERTICES, false);
-		IfcGeom::ElementSettings settings(s, 1., info ? info->entity_type : std::string(""));
+		ifcopenshell::geometry::Settings settings;
+		settings.get<ifcopenshell::geometry::settings::WeldVertices>().value = false;
 
 		IfcGeom::BRepElement brep(
 			info ? info->id : 0,
@@ -390,8 +389,8 @@ struct polyhedron_collector : public abstract_writer {
 			info ? info->guid : std::string(""),
 			"exterior", // context
 			// @todo should we have an option to use local coordinates? (i.e multiple with placement inverse here?)
-			taxonomy::make<ifcopenshell::geometry::taxonomy::matrix4>(),
-			boost::make_shared<IfcGeom::Representation::BRep>(settings, std::to_string(info ? info->id : 0) + "-" + std::to_string(elems.size()) + "-exterior", shapes), // boost::shared_ptr<IfcGeom::Representation::BRep>& geometry
+			ifcopenshell::geometry::taxonomy::make<ifcopenshell::geometry::taxonomy::matrix4>(),
+			boost::make_shared<IfcGeom::Representation::BRep>(settings, info ? info->entity_type : std::string(""), std::to_string(info ? info->id : 0) + "-" + std::to_string(elems.size()) + "-exterior", shapes), // boost::shared_ptr<IfcGeom::Representation::BRep>& geometry
 			// @todo can this remain nullptr safely?
 			nullptr // IfcUtil::IfcBaseEntity* product
 		);

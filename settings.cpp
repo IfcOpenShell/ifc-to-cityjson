@@ -1,5 +1,5 @@
 #include <ifcparse/IfcFile.h>
-#include <ifcgeom/IteratorSettings.h>
+#include <ifcgeom/ConversionSettings.h>
 
 #include "settings.h"
 
@@ -102,12 +102,12 @@ int parse_command_line(geobim_settings& settings, int argc, char ** argv) {
 		}
 	}	
 
-	settings.settings.set(IfcGeom::IteratorSettings::USE_WORLD_COORDS, false);
-	settings.settings.set(IfcGeom::IteratorSettings::WELD_VERTICES, false);
-	settings.settings.set(IfcGeom::IteratorSettings::SEW_SHELLS, true);
-	settings.settings.set(IfcGeom::IteratorSettings::CONVERT_BACK_UNITS, true);
-	settings.settings.set(IfcGeom::IteratorSettings::DISABLE_TRIANGULATION, true);
-	settings.settings.set(IfcGeom::IteratorSettings::DISABLE_OPENING_SUBTRACTIONS, !settings.apply_openings);
+	settings.settings.get<ifcopenshell::geometry::settings::UseWorldCoords>().value = false;
+	settings.settings.get<ifcopenshell::geometry::settings::WeldVertices>().value = false;
+	settings.settings.get<ifcopenshell::geometry::settings::ReorientShells>().value = true;
+	settings.settings.get<ifcopenshell::geometry::settings::ConvertBackUnits>().value = true;
+	settings.settings.get<ifcopenshell::geometry::settings::IteratorOutput>().value = ifcopenshell::geometry::settings::NATIVE;
+	settings.settings.get<ifcopenshell::geometry::settings::DisableOpeningSubtractions>().value = !settings.apply_openings;
 
 	if (vmap.count("entities")) {
 		std::vector<std::string> tokens;
