@@ -33,7 +33,7 @@ namespace {
 	};
 }
 
-#if 0
+#ifdef CITYJSON_EXECUTABLE
 
 int main(int argc, char** argv) {
 	Logger::SetOutput(&std::cerr, &std::cerr);
@@ -114,10 +114,6 @@ void perform(geobim_settings settings, std::list<IfcGeom::Element*>& elems) {
 		cec.run(std::ref(callback_global));
 
 		Logger::Notice("done processing geometries");
-
-		for (auto& f : settings.file) {
-			delete f;
-		}		
 
 		auto T1 = timer::measure("semantic_segmentation");
 		if (settings.exact_segmentation) {
@@ -217,7 +213,12 @@ void perform(geobim_settings settings, std::list<IfcGeom::Element*>& elems) {
 		}
 		T2.stop();
 
+		for (auto& f : settings.file) {
+			delete f;
+		}
 	}
+
+	Logger::SetProduct(boost::none);
 
 	timer::log();
 }

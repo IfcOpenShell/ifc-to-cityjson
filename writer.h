@@ -265,8 +265,6 @@ struct city_json_writer : public abstract_writer {
 		material["isSmooth"] = false;
 		materials.push_back(material);
 
-		std::wcout << "PC id " << (info ? info->id : 0) << " " << std::distance(begin, end) << std::endl;
-
 		for (auto it = begin; it != end; ++it) {
 			auto points = points_from_facet(it);
 			std::vector<int> faces;
