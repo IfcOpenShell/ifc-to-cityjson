@@ -92,8 +92,7 @@ int process_geometries::operator()(const std::function<void(shape_callback_item*
 		size_t num_created = 0;
 
 		auto axis_settings = settings.settings;
-		axis_settings.get<ifcopenshell::geometry::settings::IncludeSurfaces>().value = false;
-		axis_settings.get<ifcopenshell::geometry::settings::IncludeCurves>().value = true;
+		axis_settings.get<ifcopenshell::geometry::settings::OutputDimensionality>().value = ifcopenshell::geometry::settings::CURVES;
 		auto geometry_mapper = ifcopenshell::geometry::impl::mapping_implementations().construct(f, axis_settings);
 
 		for (;; ++num_created) {
