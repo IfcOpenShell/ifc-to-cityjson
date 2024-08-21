@@ -822,7 +822,9 @@ void radius_execution_context::operator()(shape_callback_item* item) {
 	if (it != first_product_for_geom_id.end()) {
 		if (it->second != item->src) {
 			if (reused_products.find(item->src) == reused_products.end()) {
-				Logger::Notice("Reused " + it->second->data().toString());
+				std::ostringstream oss;
+				it->second->toString(oss);
+				Logger::Notice("Reused " + oss.str());
 				reused_products.insert({ item->src, {
 					it->second,
 					placements.find(it->second)->second,
