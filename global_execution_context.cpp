@@ -113,7 +113,7 @@ template<typename TreeKernel>
 void global_execution_context<TreeKernel>::operator()(shape_callback_item* item) {
 
 	item_info* info = new item_info{
-		(int) item->src->data().id(),
+		(int) item->src->id(),
 		// @todo
 		0, // parent_id
 		item->src->declaration().name(),
