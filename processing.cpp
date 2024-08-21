@@ -38,7 +38,7 @@ bool shape_callback_item::to_nef_polyhedron(CGAL::Nef_polyhedron_3<Kernel_>& nef
 }
 
 void debug_writer::operator()(shape_callback_item* item) {
-	simple_obj_writer obj("debug-" + boost::lexical_cast<std::string>(item->src->data().id()));
+	simple_obj_writer obj("debug-" + boost::lexical_cast<std::string>(item->src->id()));
 	obj(nullptr, item->polyhedron.facets_begin(), item->polyhedron.facets_end());
 }
 
