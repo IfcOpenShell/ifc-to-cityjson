@@ -4,7 +4,11 @@
 #include "processing.h"
 
 #include <CGAL/AABB_tree.h>
+#if CGAL_VERSION_NR >= 1060000000
+#include <CGAL/AABB_traits_3.h>
+#else
 #include <CGAL/AABB_traits.h>
+#endif
 #include <CGAL/AABB_face_graph_triangle_primitive.h>
 
 // State that is relevant accross the different radii for which the
@@ -14,7 +18,11 @@ template <typename TreeKernel>
 struct global_execution_context : public execution_context {
 	typedef CGAL::Polyhedron_3<TreeKernel> TreeShapeType;
 	typedef CGAL::AABB_face_graph_triangle_primitive<TreeShapeType, CGAL::Default, CGAL::Tag_false> Primitive;
+#if CGAL_VERSION_NR >= 1060000000
+	typedef CGAL::AABB_traits_3<TreeKernel, Primitive> AAbbTraits;
+#else
 	typedef CGAL::AABB_traits<TreeKernel, Primitive> AAbbTraits;
+#endif
 	typedef typename AAbbTraits::Bounding_box Bounding_box;
 	typedef CGAL::AABB_tree<AAbbTraits> AAbbTree;
 	typedef typename AAbbTree::Primitive_id Primitive_id;
